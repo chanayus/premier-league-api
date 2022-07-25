@@ -4,10 +4,41 @@ const { default: axios } = require("axios");
 
 const app = express();
 
-const squad_url = "https://www.premierleague.com/clubs/1/Arsenal/squad";
-const stadium_url = "https://www.premierleague.com/clubs/1/Arsenal/stadium";
+const allTeam_url = "https://www.premierleague.com/clubs";
 
-const getSquad = ($, teamData, squad) => {
+// const getTeamData = ($, teamData) => {
+//   const heroSection = $("header.clubHero");
+//   teamData.name = $(heroSection).find(".clubDetails h1").text();
+//   teamData.logo = `https:${$(heroSection).find(".clubSvg").attr("srcset")}`;
+//   teamData.website = `https://${$(heroSection).find(".website a").text()}`;
+//   teamData.stadium = "Emirates Stadium";
+
+//   console.log($(heroSection).find("div.clubDetails").html());
+// };
+
+// app.get("/get", async (req, res) => {
+//   try {
+//     const squad = [];
+//     const teamData = {};
+//     // Get All Team Data
+
+//     // Each Team
+//     const { data } = await axios.get(squad_url);
+//     const $ = await cheerio.load(data);
+
+//     // getAllTeam($, teamData);
+//     getTeamData($, teamData);
+
+//     getSquad($, teamData, squad);
+
+//     res.status(200).send(teamData);
+//   } catch (error) {
+//     res.send(error);
+//   }
+// });
+
+const getSquad = ($) => {
+  const squad = [];
   const container = $("ul.squadListContainer > li");
 
   for (let i = 0; i < container.length; i++) {
@@ -19,42 +50,46 @@ const getSquad = ($, teamData, squad) => {
       nationality: $(container[i]).find(".squadPlayerStats li.nationality .playerCountry").text(),
     });
   }
-  teamData.squad = squad;
+
+  return squad;
 };
 
-const getTeamData = ($, teamData) => {
-  const heroSection = $("header.clubHero");
-  teamData.name = $(heroSection).find(".clubDetails h1").text();
-  teamData.logo = `https:${$(heroSection).find(".clubSvg").attr("srcset")}`;
-  teamData.website = `https://${$(heroSection).find(".website a").text()}`;
-  teamData.stadium = "Emirates Stadium";
+const getAllTeam = async ($, allTeamData) => {
+  const container = $("main#mainContent ul.dataContainer li");
 
-  console.log($(heroSection).find("div.clubDetails").html());
-};
-
-// const getStadiumData = ($, teamData) => {
-//   const container = $(".articleTab");
-//   teamData.stadium = {
-//     name: $(container).find("p").text(),
-//     capacity: "s",
-//     address: "",
-//   };
-// };
-
-app.get("/get", async (req, res) => {
-  try {
-    const squad = [];
+  for (let i = 0; i < $(container).length; i++) {
     const teamData = {};
-    const { data } = await axios.get(squad_url);
-    const { data: stadium } = await axios.get(stadium_url);
+    teamData.id = $(container[i]).find("a").attr("href").split("/")[2];
+    teamData.name = $(container[i]).find(".indexInfo .nameContainer .clubName").text();
+    teamData.stadium = $(container[i]).find(".indexInfo .nameContainer .stadiumName").text();
+    const teamId = $(container[i]).find(".indexBadge img.badge-image").attr("src").split("/")[6].split(".")[0];
+    teamData.badge = `https://resources.premierleague.com/premierleague/badges/${teamId}.svg`;
+
+    allTeamData.push(teamData);
+  }
+};
+
+app.get("/all", async (req, res) => {
+  try {
+    let allTeamData = [];
+
+    // Get All Team Data
+    const { data } = await axios.get(allTeam_url);
     const $ = await cheerio.load(data);
-    const $stadium = await cheerio.load(stadium);
 
-    getTeamData($, teamData);
-    // getStadiumData($stadium, teamData);
-    getSquad($, teamData, squad);
+    getAllTeam($, allTeamData);
 
-    res.status(200).send(teamData);
+    for (const [index, item] of allTeamData.entries()) {
+      try {
+        const { data: squad } = await axios.get(allTeam_url + `/${item.id}/club/squad`);
+        const $squad = await cheerio.load(squad);
+        const eachSquad = await getSquad($squad);
+        allTeamData[index].squad = await eachSquad;
+      } catch (error) {
+        res.send(error);
+      }
+    }
+    res.status(200).send(allTeamData);
   } catch (error) {
     res.send(error);
   }
