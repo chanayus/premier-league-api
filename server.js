@@ -57,6 +57,9 @@ app.get("/team/:id", async (req, res) => {
       const { data: squad } = await axios.get(allTeam_url + `/${responseData[0].id}/club/squad`)
       const $squad = await cheerio.load(squad)
       const eachSquad = await getSquad($squad)
+      const heroSection = await $squad("header.clubHero")
+
+      responseData[0].website = await `https://${$(heroSection).find(".website a").text()}`
       responseData[0].squad = await eachSquad
     } catch (error) {
       res.send(error)
@@ -84,6 +87,9 @@ app.get("/all", async (req, res) => {
         const { data: squad } = await axios.get(allTeam_url + `/${item.id}/club/squad`)
         const $squad = await cheerio.load(squad)
         const eachSquad = await getSquad($squad)
+        const heroSection = await $squad("header.clubHero")
+
+        allTeamData[index].website = await `https://${$(heroSection).find(".website a").text()}`
         allTeamData[index].squad = await eachSquad
       } catch (error) {
         res.send(error)
