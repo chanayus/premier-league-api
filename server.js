@@ -1,8 +1,11 @@
 const express = require("express")
+const cors = require("cors")
 const cheerio = require("cheerio")
 const { default: axios } = require("axios")
 
 const app = express()
+
+app.use(cors())
 
 const allTeam_url = "https://www.premierleague.com/clubs"
 
@@ -40,6 +43,9 @@ const getAllTeam = async ($, allTeamData) => {
   }
 }
 
+app.get("/", async (req, res) => {
+  res.status(200).send("Premier League Data API")
+})
 // Get Single Team Data Sort by Character
 
 app.get("/team/:id", async (req, res) => {
@@ -100,5 +106,28 @@ app.get("/all", async (req, res) => {
     res.send(error)
   }
 })
+
+// Get League Table
+
+// app.get("/table", async (req, res) => {
+//   try {
+//     const allTeamData = []
+
+//     const { data } = await axios.get("https://www.premierleague.com/tables")
+//     const $ = await cheerio.load(data)
+
+//     const container = $(".allTablesContainer .tableContainer table tbody tr")
+
+//     for (let i = 0; i < $(container).length; i++) {
+//       i % 2 == 0 && console.log($(container[i]).find("td.team span.long").text());
+//     }
+
+//     console.log($(container).length);
+
+//     res.status(200).send("asdasd")
+//   } catch (error) {
+//     res.send(error)
+//   }
+// })
 
 app.listen(8080, () => {})
