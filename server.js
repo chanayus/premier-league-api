@@ -5,73 +5,48 @@ const { default: axios } = require("axios")
 
 const app = express()
 
+const getSquad = require("./modules/getSquad").getSquad
+
 app.use(cors())
 
-const allTeam_url = "https://www.premierleague.com/clubs"
+const CLUBS_URL = "https://www.premierleague.com/clubs"
 
-const getSquad = ($) => {
-  const squad = []
-  const container = $("ul.squadListContainer > li")
-
-  for (let i = 0; i < container.length; i++) {
-    squad.push({
-      name: $(container[i]).find(".playerCardInfo h4.name").text(),
-      image: `https://resources.premierleague.com/premierleague/photos/players/250x250/${$(container[i])
-        .find(".squadPlayerHeader img.statCardImg")
-        .attr("data-player")}.png`,
-      position: $(container[i]).find(".playerCardInfo span.position").text(),
-      number: $(container[i]).find(".playerCardInfo span.number").text(),
-      nationality: $(container[i]).find(".squadPlayerStats li.nationality .playerCountry").text(),
-    })
-  }
-
-  return squad
-}
-
-const getAllTeam = async ($, allTeamData) => {
-  const container = $("main#mainContent ul.dataContainer li")
-
-  for (let i = 0; i < $(container).length; i++) {
-    const teamData = {}
-    teamData.id = $(container[i]).find("a").attr("href").split("/")[2]
-    teamData.name = $(container[i]).find(".indexInfo .nameContainer .clubName").text()
-    teamData.stadium = $(container[i]).find(".indexInfo .nameContainer .stadiumName").text()
-    const teamId = $(container[i]).find(".indexBadge img.badge-image").attr("src").split("/")[6].split(".")[0]
-    teamData.badge = `https://resources.premierleague.com/premierleague/badges/${teamId}.svg`
-
-    allTeamData.push(teamData)
-  }
-}
-
-app.get("/", async (req, res) => {
-  res.status(200).send("Premier League Data API")
-})
 // Get Single Team Data Sort by Character
 
-app.get("/team/:id", async (req, res) => {
+app.get("/:id", async (req, res) => {
   try {
-    const teamData = []
-
-    const { data } = await axios.get(allTeam_url)
+    const response = []
+    const { data } = await axios.get(CLUBS_URL)
     const $ = await cheerio.load(data)
+    const container = $("ul.club-list a")
 
-    getAllTeam($, teamData)
+    for (let i = 1; i < $(container).length; i++) {
+      const teamId = $(container[i - 1])
+        .attr("href")
+        .split("/")[2]
 
-    const responseData = teamData.filter((item, index) => index === req.params.id - 1)
+      if (`${i}` === req.params.id) {
+        const team = await getSquad(teamId)
 
-    try {
-      const { data: squad } = await axios.get(allTeam_url + `/${responseData[0].id}/club/squad`)
-      const $squad = await cheerio.load(squad)
-      const eachSquad = await getSquad($squad)
-      const heroSection = await $squad("header.clubHero")
-
-      responseData[0].website = await `https://${$(heroSection).find(".website a").text()}`
-      responseData[0].squad = await eachSquad
-    } catch (error) {
-      res.send(error)
+        response.push({
+          id: teamId,
+          index: `${i}`,
+          name: $(container[i - 1])
+            .find(".club-card__name")
+            .text(),
+          stadium: $(container[i - 1])
+            .find(".club-card__stadium")
+            .text(),
+          badge: $(container[i - 1])
+            .find("img.badge-image")
+            .attr("src"),
+          squad: team,
+        })
+        break
+      }
     }
 
-    res.status(200).send(responseData)
+    res.status(200).send(response)
   } catch (error) {
     res.send(error)
   }
@@ -79,29 +54,28 @@ app.get("/team/:id", async (req, res) => {
 
 // Get All Team Data
 
-app.get("/all", async (req, res) => {
+app.get("/", async (_, res) => {
   try {
-    const allTeamData = []
+    const response = []
 
-    const { data } = await axios.get(allTeam_url)
+    const { data } = await axios.get(CLUBS_URL)
     const $ = await cheerio.load(data)
+    const container = $("ul.club-list a")
 
-    getAllTeam($, allTeamData)
-
-    for (const [index, item] of allTeamData.entries()) {
-      try {
-        const { data: squad } = await axios.get(allTeam_url + `/${item.id}/club/squad`)
-        const $squad = await cheerio.load(squad)
-        const eachSquad = await getSquad($squad)
-        const heroSection = await $squad("header.clubHero")
-
-        allTeamData[index].website = await `https://${$(heroSection).find(".website a").text()}`
-        allTeamData[index].squad = await eachSquad
-      } catch (error) {
-        res.send(error)
-      }
+    for (let i = 0; i < $(container).length; i++) {
+      const teamId = $(container[i]).attr("href").split("/")[2]
+      const team = await getSquad(teamId)
+      response.push({
+        id: teamId,
+        index: `${i + 1}`,
+        name: $(container[i]).find(".club-card__name").text(),
+        stadium: $(container[i]).find(".club-card__stadium").text(),
+        badge: $(container[i]).find("img.badge-image").attr("src"),
+        squad: team,
+      })
     }
-    res.status(200).send(allTeamData)
+
+    res.status(200).send(response)
   } catch (error) {
     res.send(error)
   }
