@@ -20,6 +20,7 @@ const getSquad = async (teamId) => {
         position: position.eq(j).find(".stats-card__position-container .stats-card__player-position").text(),
         number: position.eq(j).find(".stats-card__position-container .stats-card__squad-number").text(),
         nationality: position.eq(j).find(".stats-card__player-country").text(),
+        nationFlagIcon: position.eq(j).find(".stats-card__flag-icon").attr("src"),
       })
     }
   }
